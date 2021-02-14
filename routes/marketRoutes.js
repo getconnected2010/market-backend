@@ -7,8 +7,10 @@ const MC = require('../controller/marketController')
 const VAL = require('../utility/validate')
 const multerMiddleware= multer()
 
+//list of items
+router.get('/list/:catagory', MC.getList)
 //post to classifieds route
-router.use('/post', multerMiddleware.array('pics'), JWT.verify, VAL.files, AWS.upload, MC.newPost)   
+router.post('/post', multerMiddleware.array('pics'), JWT.verify, VAL.files, AWS.upload, MC.newPost)   
 
 
 module.exports= router
