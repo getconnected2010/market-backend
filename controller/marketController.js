@@ -12,6 +12,19 @@ exports.getList = (req, res)=>{
     })
 }
 
+exports.getPics = (req, res)=>{
+    const picsSql = "SELECT TOP 10 ROWS image1, image2, image3, image4 FROM users WHERE image1 !=null"
+    pool.getConnection((err, connection)=>{
+        if(err) return res.status(500).json({msg:'server error fetcing pictures'})
+        connection.query(picsSql, (err, result)=>{
+            connection.release()
+            console.log(err)
+            if(err) return res.status(500).json({msg:'database error fetching pictures'})
+            console.log(result)
+        })
+    })
+}
+
 exports.newPost = (req, res)=>{
     let {user_id, catagory, title, description, image1, image2, image3, image4, contact, email} = req.body
     image1===undefined? image1=null: image1;

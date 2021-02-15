@@ -38,6 +38,7 @@ exports.refresh=(req, res, next)=>{
             if(result.length!==1) return res.status(401).json({msg:'Your session cannot be refreshed. Please login'})
             if(result.length===1){
                 const refresh_token=result[0].refresh_token
+                if(!refresh_token) return res.status(401).json({msg:'Your session has expired. Please login.'})
                 let {count} = jwt.decode(refresh_token)
                 if(count>5) return res.status(401).json({msg:'your session has expired and reached a maximum refresh count. Please login using credentials'})
                 req.body.count = count+1

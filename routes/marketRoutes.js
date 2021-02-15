@@ -9,6 +9,8 @@ const multerMiddleware= multer()
 
 //list of items
 router.get('/list/:catagory', MC.getList)
+//get pics
+router.get('/pics', MC.getPics)
 //post to classifieds route
 router.post('/post', multerMiddleware.array('pics'), JWT.verify, VAL.files, AWS.upload, MC.newPost)   
 
