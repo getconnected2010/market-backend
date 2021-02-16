@@ -13,14 +13,14 @@ exports.getList = (req, res)=>{
 }
 
 exports.getPics = (req, res)=>{
-    const picsSql = "SELECT TOP 10 ROWS image1, image2, image3, image4 FROM users WHERE image1 !=null"
+    const picsSql = "SELECT image1 FROM posts WHERE image1 IS NOT NULL LIMIT 10"
     pool.getConnection((err, connection)=>{
         if(err) return res.status(500).json({msg:'server error fetcing pictures'})
         connection.query(picsSql, (err, result)=>{
             connection.release()
             console.log(err)
             if(err) return res.status(500).json({msg:'database error fetching pictures'})
-            console.log(result)
+            res.status(200).json(result)
         })
     })
 }
