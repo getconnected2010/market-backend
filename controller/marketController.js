@@ -36,10 +36,21 @@ exports.newPost = (req, res)=>{
         if(err) return res.status(500).json({msg:'server error posting to classifieds'})
         connnection.query(uploadSql, [user_id, catagory, title, description, image1, image2, image3, image4, price, contact, email], (err)=>{
             connnection.release()
-            if(err) {
-                return res.status(500).json({msg:'database error posting to classifieds'})
-            }
+            if(err) return res.status(500).json({msg:'database error posting to classifieds'})
             res.status(200).json({msg:'successfully posted to classifieds'})
+        })
+    })
+}
+
+exports.searchPosts = (req, res)=>{
+    const {criteria} = req.params
+    const searchSql= "SELECT post_id, user_id, title, description, price, image1, image2, image3, image4, contact FROM posts WHERE title LIKE ? order by post_id desc"
+    pool.getConnection((err, connection)=>{
+        if(err) return res.status(500).json({msg:'server error searching keyword'})
+        connection.query(searchSql,[`%${criteria}%`],(err, result)=>{
+            if(err) return res.status(500).json({msg:'database error searching keyword'})
+            connection.release()
+            res.status(200).json(result)
         })
     })
 }
