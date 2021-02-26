@@ -1,4 +1,41 @@
 const pool = require('../database/dbConfig')
+const nodeMailer = require('nodemailer')
+
+exports.emailSeller=(req, res)=>{
+    const {email, message} = req.body
+    const transporter = nodeMailer.createTransport({
+        service:'outlook',
+        auth:{
+            user: process.env.NODEMAILER_USER,
+            pass: process.env.NODEMAILER_PASS
+        }
+    })
+    const options = {
+        from:'mysmallmarket@outlook.com',
+        to: email,
+        subject:'buyer inquiry to a post on Market',
+        text: message + '.  ' + "This is an unmonitored inbox. Please don't reply to this email."
+    }
+    transporter.sendMail(options, (err, info)=>{
+        if(err) return res.status(500).json({msg:'server error contacting seller'})
+        if(info.rejected.length===0) return res.status(200).json({msg:'message successfully sent to seller'})
+        res.status(403).json({msg:'message rejected by seller email server'})
+    })
+}
+
+exports.fetchPostDetails=(req, res, next)=>{
+    const {post_id} = req.body
+    const detailSql= "SELECT email FROM posts WHERE post_id=?"
+    pool.getConnection((err, connection)=>{
+        if(err) return res.status(500).json({msg:'sever error contacting seller'})
+        connection.query(detailSql, [post_id], (err, result)=>{
+            connection.release()
+            if(err) return res.status(500).json({msg:'database error contacting seller'})
+            req.body.email= result[0].email
+            next()
+        })
+    })
+}
 
 exports.getList = (req, res)=>{
     const {catagory} = req.params
