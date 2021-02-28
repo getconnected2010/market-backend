@@ -1,8 +1,9 @@
 const pool = require('../database/dbConfig')
 const nodeMailer = require('nodemailer')
+//const template = require('../utility/template')
 
 exports.emailSeller=(req, res)=>{
-    const {email, message} = req.body
+    const {dbEmail, dbTitle, message} = req.body
     const transporter = nodeMailer.createTransport({
         service:'outlook',
         auth:{
@@ -12,26 +13,34 @@ exports.emailSeller=(req, res)=>{
     })
     const options = {
         from:'mysmallmarket@outlook.com',
-        to: email,
+        to: dbEmail,
         subject:'buyer inquiry to a post on Market',
-        text: message + '.  ' + "This is an unmonitored inbox. Please don't reply to this email."
+        html: `<div>${message}</div>
+                <div><u><b>This is unmonitored email inbox. Please contact seller directly.</b></u></div>
+                <div>${dbTitle}</div>`
     }
     transporter.sendMail(options, (err, info)=>{
         if(err) return res.status(500).json({msg:'server error contacting seller'})
         if(info.rejected.length===0) return res.status(200).json({msg:'message successfully sent to seller'})
-        res.status(403).json({msg:'message rejected by seller email server'})
+        res.status(403).json({msg:'message rejected by seller email address'})
     })
 }
 
 exports.fetchPostDetails=(req, res, next)=>{
     const {post_id} = req.body
-    const detailSql= "SELECT email FROM posts WHERE post_id=?"
+    const detailSql= "SELECT user_id, email, title, image1, image2, image3, image4 FROM posts WHERE post_id=?"
     pool.getConnection((err, connection)=>{
         if(err) return res.status(500).json({msg:'sever error contacting seller'})
         connection.query(detailSql, [post_id], (err, result)=>{
             connection.release()
             if(err) return res.status(500).json({msg:'database error contacting seller'})
-            req.body.email= result[0].email
+            req.body.dbUser_id = result[0].user_id
+            req.body.dbEmail = result[0].email
+            req.body.dbTitle = result[0].title
+            req.body.image1 = result[0].image1
+            req.body.image2 = result[0].image2
+            req.body.image3 = result[0].image3
+            req.body.image4 = result[0].image4
             next()
         })
     })
@@ -43,20 +52,33 @@ exports.getList = (req, res)=>{
         if(err) return res.status(500).json({msg:`server error fetching items in ${catagory} catagory.`})
         //fetch list from a specific catagory
         if(catagory!=='undefined'){
-            const fetchSql = "SELECT post_id, user_id, title, description, price, image1, image2, image3, image4, contact FROM posts WHERE catagory=? order by post_id desc"
+            const fetchSql = "SELECT post_id, catagory, title, description, price, image1, image2, image3, image4, contact FROM posts WHERE catagory=? order by post_id desc"
             connection.query(fetchSql, [catagory], (err, result)=>{
                 if(err) return res.status(500).json({msg:`database error fetching items in ${catagory} catagory`})
                 res.status(200).json(result)
             })
         }else{
             //fetch list of last 10 recent posts for home page initial list
-            const fetchSql = "SELECT post_id, user_id, title, description, price, image1, image2, image3, image4, contact FROM posts order by post_id desc LIMIT 10"
+            const fetchSql = "SELECT post_id, catagory, title, description, price, image1, image2, image3, image4, contact FROM posts order by post_id desc LIMIT 10"
             connection.query(fetchSql, (err, result)=>{
                 connection.release()
                 if(err) return res.status(500).json({msg:'database error fetching pictures'})
                 res.status(200).json(result)
             })
         }
+    })
+}
+
+exports.myPosts = (req, res)=>{
+    const {user_id} = req.body
+    const myPostSql =  "SELECT post_id, user_id, catagory, title, description, price, contact, email, image1, image2, image3, image4 FROM posts WHERE user_id=? order by post_id desc"
+    pool.getConnection((err, connection)=>{
+        if(err) return res.status(500).json({msg:'server error fetching your posts'})
+        connection.query(myPostSql, [user_id], (err, result)=>{
+            connection.release()
+            if(err) return res.status(500).json({msg:'database error fetching your posts'})
+            res.status(200).json(result)
+        })
     })
 }
 
@@ -81,13 +103,32 @@ exports.newPost = (req, res)=>{
 
 exports.searchPosts = (req, res)=>{
     const {criteria} = req.params
-    const searchSql= "SELECT post_id, user_id, title, description, price, image1, image2, image3, image4, contact FROM posts WHERE title LIKE ? order by post_id desc"
+    const searchSql= "SELECT post_id, catagory, title, description, price, image1, image2, image3, image4, contact FROM posts WHERE title LIKE ? order by post_id desc"
     pool.getConnection((err, connection)=>{
         if(err) return res.status(500).json({msg:'server error searching keyword'})
         connection.query(searchSql,[`%${criteria}%`],(err, result)=>{
             if(err) return res.status(500).json({msg:'database error searching keyword'})
             connection.release()
             res.status(200).json(result)
+        })
+    })
+}
+
+exports.updatePost = (req, res)=>{
+    let {post_id, catagory, title, description, image1, image2, image3, image4, price, contact, email} = req.body
+    image1===undefined? image1=null: image1;
+    image2===undefined? image2=null: image2;
+    image3===undefined? image3=null: image3;
+    image4===undefined? image4=null: image4;
+    email===undefined? email=null: email;
+    price? price: price=null
+    const updateSql = "UPDATE posts SET catagory=?, title=?, description=?, image1=?, image2=?, image3=?, image4=?, price=?, contact=?, email=? where post_id=?"
+    pool.getConnection((err, connection)=>{
+        if(err) return res.status(500).json({msg:'server error updating post'})
+        connection.query(updateSql, [catagory, title, description, image1, image2, image3, image4, price, contact, email, post_id], (err, result)=>{
+            connection.release()
+            if(err) return res.status(500).json({msg:'database error updating post'})
+            res.status(200).json({msg:'post has been successfully updated'})
         })
     })
 }

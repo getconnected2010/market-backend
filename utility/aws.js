@@ -28,3 +28,26 @@ exports.upload=async (req, res, next)=>{
         res.status(500).json({msg:'server error uploading images'})
     }
 }
+
+exports.delete = async(req, res, next)=>{
+    try {
+        const {image1, image2, image3, image4} = req.body
+        let delArr = []
+        if(image1) delArr.push(image1)
+        if(image2) delArr.push(image2)
+        if(image3) delArr.push(image3)
+        if(image4) delArr.push(image4)
+        for(const file of delArr){
+            const keyArr = file.split('/')
+            const key = keyArr[keyArr.length-1]
+            const params ={
+                Bucket: process.env.S3_BUCKET,
+                Key: key
+            }
+            await s3.deleteObject(params).promise()
+        }
+        next()
+    } catch (error) {
+        res.status(500).json({msg:'error deleting images.'})
+    }
+}

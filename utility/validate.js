@@ -24,3 +24,13 @@ exports.files=async(req, res, next)=>{
     if(fileError.length!==0) return res.status(403).json({msg: fileError[0]})
     next()
 }
+
+exports.userIdMatch = (req, res, next)=>{
+    try {
+        const {dbUser_id, user_id} = req.body
+        if(dbUser_id===user_id) return next()
+        res.status(403).json({msg:"you don't have access to delete this posting."})
+    } catch (error) {
+        res.status(500).json({msg:'server error verifying user id'})
+    }
+}
