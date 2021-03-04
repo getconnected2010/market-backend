@@ -7,6 +7,8 @@ const MC = require('../controller/marketController')
 const VAL = require('../utility/validate')
 const multerMiddleware= multer()
 
+//delete post
+router.delete('/:post_id', JWT.verify, MC.fetchPostDetails,  VAL.userIdMatch, AWS.delete, MC.deletePost)
 //list of items
 router.get('/list/:catagory', MC.getList)
 //message seller

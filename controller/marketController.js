@@ -1,6 +1,21 @@
 const pool = require('../database/dbConfig')
 const nodeMailer = require('nodemailer')
+const { post } = require('../routes/marketRoutes')
 //const template = require('../utility/template')
+
+exports.deletePost=(req, res)=>{
+    const post_id = req.params.post_id
+    const delSql= "DELETE FROM posts WHERE post_id=?"
+    pool.getConnection((err, connection)=>{
+        if(err) return res.status(500).json({msg:'Server error deleting post'})
+        connection.query(delSql, [post_id], (err)=>{
+            connection.release()
+            if(err) return res.status(500).json({msg:'Database error deleting post'})
+            res.status(200).json({msg:'Successfully deleted post.'})
+        })
+    })
+
+}
 
 exports.emailSeller=(req, res)=>{
     const {dbEmail, dbTitle, message} = req.body
@@ -27,13 +42,14 @@ exports.emailSeller=(req, res)=>{
 }
 
 exports.fetchPostDetails=(req, res, next)=>{
-    const {post_id} = req.body
+    const post_id = req.body.post_id || req.params.post_id
     const detailSql= "SELECT user_id, email, title, image1, image2, image3, image4 FROM posts WHERE post_id=?"
     pool.getConnection((err, connection)=>{
         if(err) return res.status(500).json({msg:'sever error contacting seller'})
         connection.query(detailSql, [post_id], (err, result)=>{
             connection.release()
             if(err) return res.status(500).json({msg:'database error contacting seller'})
+            if(result.length===0) return res.status(403).json({msg:"Post couldn't be found in database."})
             req.body.dbUser_id = result[0].user_id
             req.body.dbEmail = result[0].email
             req.body.dbTitle = result[0].title
@@ -124,10 +140,10 @@ exports.updatePost = (req, res)=>{
     price? price: price=null
     const updateSql = "UPDATE posts SET catagory=?, title=?, description=?, image1=?, image2=?, image3=?, image4=?, price=?, contact=?, email=? where post_id=?"
     pool.getConnection((err, connection)=>{
-        if(err) return res.status(500).json({msg:'server error updating post'})
+        if(err) return res.status(500).json({msg:'Server error updating post. Please try again. Note: if old post had images, they have been deleted.'})
         connection.query(updateSql, [catagory, title, description, image1, image2, image3, image4, price, contact, email, post_id], (err, result)=>{
             connection.release()
-            if(err) return res.status(500).json({msg:'database error updating post'})
+            if(err) return res.status(500).json({msg:'Database error updating post. Please try again. Note: if old post had images, they have been deleted.'})
             res.status(200).json({msg:'post has been successfully updated'})
         })
     })
