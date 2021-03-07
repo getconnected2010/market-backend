@@ -1,10 +1,24 @@
 const { RDS } = require('aws-sdk')
 const jwt = require('jsonwebtoken')
 const pool = require('../database/dbConfig')
+const { refresh } = require('../utility/jwt')
+
+exports.changePass=(req, res)=>{
+    const{hashedPass, username} = req.body
+    const changePassSql = "UPDATE users SET password=? WHERE username=?"
+    pool.getConnection((err, connection)=>{
+        if(err) return res.status(500).json({msg:'Server error changing password. Please try again.'})
+        connection.query(changePassSql, [hashedPass, username], (err)=>{
+            connection.release()
+            if(err) return res.status(500).json({msg:'Database error changing password. Please try again.'})
+            res.status(200).json({msg:'Successfully changed password.'})
+        })
+    })
+}
 
 exports.checkUserInDb=(req, res, next)=>{
     const {username} = req.body
-    const userSql = "SELECT user_id, password, admin FROM users WHERE username=?"
+    const userSql = "SELECT user_id, password, pet, admin FROM users WHERE username=?"
     pool.getConnection((err, connection)=>{
         if(err) return res.status(500).json({msg:'server error verifying username'})
         connection.query(userSql, [username], (err, result)=>{
@@ -15,9 +29,23 @@ exports.checkUserInDb=(req, res, next)=>{
             if(result.length===1){
                 req.body.user_id= result[0].user_id
                 req.body.dbPassword = result[0].password
+                req.body.dbPet = result[0].pet
                 req.body.admin = result[0].admin
                 next()
             }
+        })
+    })
+}
+
+exports.resetPass= (req, res)=>{
+    const {dbPet, hashedPass, pet, username} = req.body
+    if(dbPet!==pet) return res.status(403).json({msg:"Your answer for 'pet name' didn't match our record."})
+    const resetSql = "UPDATE users SET password= ? WHERE username=?"
+    pool.getConnection((err, connection)=>{
+        if(err) return res.status(500).json({msg:'Server error resetting password. Please try again.'})
+        connection.query(resetSql, [hashedPass, username], (err, result)=>{
+            if(err) return res.status(500).json({msg:'Database error resetting password. Please try again.'})
+            res.status(200).json({msg:'Password updated. Please login using new credentials.'})
         })
     })
 }
@@ -48,6 +76,21 @@ exports.signout=(req, res)=>{
             connection.release()
             if(err) return res.status(401).json({msg:'database error deleting session tokens'})
             res.status(200).json({msg:'successfully logged out'})
+        })
+    })
+}
+
+exports.usernameAvailable=(req, res, next)=>{
+    const {username} = req.body
+    const usernameSql = "SELECT COUNT(*) AS users FROM users WHERE username =?"
+    pool.getConnection((err, connection)=>{
+        if(err) return res.status(500).json({msg:'Server error checking username availability'})
+        connection.query(usernameSql, [username], (err, result)=>{
+            connection.release()
+            if(err) return res.status(500).json({msg:'Database error checking username availability'})
+            if(!result)  return res.status(500).json({msg:'Database error checking username availability'})
+            if(result[0].users===0) return next()
+            res.status(403).json({msg:'Username not available. Please choose another username.'})
         })
     })
 }
