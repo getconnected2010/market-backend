@@ -5,7 +5,7 @@ const password = require('../utility/password')
 const UC = require('../controller/userController')
 
 //change password
-router.post('/change', JWT.verify, UC.checkUserInDb, password.checkOldPass, password.hash, UC.changePass)
+router.post('/change', JWT.verify, UC.checkUserInDb, password.check, password.hash, UC.changePass)
 //reset
 router.post('/reset', UC.checkUserInDb, password.hash, UC.resetPass)
 //signin route

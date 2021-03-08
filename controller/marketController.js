@@ -43,7 +43,13 @@ exports.emailSeller=(req, res)=>{
 
 exports.fetchPostDetails=(req, res, next)=>{
     const post_id = req.body.post_id || req.params.post_id
-    const detailSql= "SELECT user_id, email, title, image1, image2, image3, image4 FROM posts WHERE post_id=?"
+    const {keepPic} = req.body
+    let detailSql;
+    //for update post route, this will determine to get image details from database
+    keepPic==='false' ?
+    detailSql= "SELECT user_id FROM posts WHERE post_id=?"
+    :
+    detailSql= "SELECT user_id, email, title, image1, image2, image3, image4 FROM posts WHERE post_id=?"
     pool.getConnection((err, connection)=>{
         if(err) return res.status(500).json({msg:'sever error contacting seller'})
         connection.query(detailSql, [post_id], (err, result)=>{
@@ -131,17 +137,29 @@ exports.searchPosts = (req, res)=>{
 }
 
 exports.updatePost = (req, res)=>{
-    let {post_id, catagory, title, description, image1, image2, image3, image4, price, contact, email} = req.body
+    let {post_id, catagory, title, description, image1, image2, image3, image4, price, contact, email, keepPic} = req.body
     image1===undefined? image1=null: image1;
     image2===undefined? image2=null: image2;
     image3===undefined? image3=null: image3;
     image4===undefined? image4=null: image4;
     email===undefined? email=null: email;
     price? price: price=null
-    const updateSql = "UPDATE posts SET catagory=?, title=?, description=?, image1=?, image2=?, image3=?, image4=?, price=?, contact=?, email=? where post_id=?"
+    //ternary opeator to check if old pics are kept or new one's have been uploaded to aws
+    keepPic==='true'?
     pool.getConnection((err, connection)=>{
         if(err) return res.status(500).json({msg:'Server error updating post. Please try again. Note: if old post had images, they have been deleted.'})
-        connection.query(updateSql, [catagory, title, description, image1, image2, image3, image4, price, contact, email, post_id], (err, result)=>{
+        const updateSql = "UPDATE posts SET catagory=?, title=?, description=?, price=?, contact=?, email=? where post_id=?"
+        connection.query(updateSql, [catagory, title, description, price, contact, email, post_id], (err)=>{
+            connection.release()
+            if(err) return res.status(500).json({msg:'Database error updating post. Please try again. Note: if old post had images, they have been deleted.'})
+            res.status(200).json({msg:'post has been successfully updated'})
+        })
+    })
+    :
+    pool.getConnection((err, connection)=>{
+        if(err) return res.status(500).json({msg:'Server error updating post. Please try again. Note: if old post had images, they have been deleted.'})
+        const updateSql = "UPDATE posts SET catagory=?, title=?, description=?, image1=?, image2=?, image3=?, image4=?, price=?, contact=?, email=? where post_id=?"
+        connection.query(updateSql, [catagory, title, description, image1, image2, image3, image4, price, contact, email, post_id], (err)=>{
             connection.release()
             if(err) return res.status(500).json({msg:'Database error updating post. Please try again. Note: if old post had images, they have been deleted.'})
             res.status(200).json({msg:'post has been successfully updated'})
