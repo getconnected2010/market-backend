@@ -45,7 +45,7 @@ exports.fetchPostDetails=(req, res, next)=>{
     const post_id = req.body.post_id || req.params.post_id
     const {keepPic} = req.body
     let detailSql;
-    //for update post route, this will determine to get image details from database
+    //for 'update post' route, this will determine to get image details from database to keep old images.
     keepPic==='false' ?
     detailSql= "SELECT user_id FROM posts WHERE post_id=?"
     :
